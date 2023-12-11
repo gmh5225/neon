@@ -205,6 +205,10 @@ pub trait RemoteStorage: Send + Sync + 'static {
     async fn delete(&self, path: &RemotePath) -> anyhow::Result<()>;
 
     async fn delete_objects<'a>(&self, paths: &'a [RemotePath]) -> anyhow::Result<()>;
+
+    async fn copy(&self, from: &RemotePath, to: &RemotePath) -> anyhow::Result<()> {
+        todo!("implement naive copy")
+    }
 }
 
 pub struct Download {
@@ -365,6 +369,13 @@ impl GenericRemoteStorage {
             Self::AwsS3(s) => s.delete_objects(paths).await,
             Self::AzureBlob(s) => s.delete_objects(paths).await,
             Self::Unreliable(s) => s.delete_objects(paths).await,
+        }
+    }
+
+    pub async fn copy_object(&self, from: &RemotePath, to: &RemotePath) -> anyhow::Result<()> {
+        match self {
+            Self::AwsS3(s) => s.copy(from, to).await,
+            _ => todo!(),
         }
     }
 }
@@ -653,6 +664,7 @@ impl ConcurrencyLimiter {
             RequestKind::Put => &self.write,
             RequestKind::List => &self.read,
             RequestKind::Delete => &self.write,
+            RequestKind::Copy => &self.write,
         }
     }
 
