@@ -191,6 +191,16 @@ pub struct TimelineCreateRequest {
     pub pg_version: Option<u32>,
 }
 
+#[derive(Serialize, Deserialize)]
+pub struct TenantShardSplitRequest {
+    pub new_shard_count: u8,
+}
+
+#[derive(Serialize, Deserialize)]
+pub struct TenantShardSplitResponse {
+    pub new_shards: Vec<TenantShardId>,
+}
+
 /// Parameters that apply to all shards in a tenant.  Used during tenant creation.
 #[derive(Serialize, Deserialize, Debug)]
 #[serde(deny_unknown_fields)]
@@ -202,7 +212,7 @@ pub struct ShardParameters {
 }
 
 impl ShardParameters {
-    fn is_unsharded(&self) -> bool {
+    pub fn is_unsharded(&self) -> bool {
         self.count == ShardCount(0)
     }
 }
@@ -251,7 +261,7 @@ impl std::ops::Deref for TenantCreateRequest {
 
 /// An alternative representation of `pageserver::tenant::TenantConf` with
 /// simpler types.
-#[derive(Serialize, Deserialize, Debug, Default)]
+#[derive(Serialize, Deserialize, Debug, Default, PartialEq, Eq, Clone)]
 pub struct TenantConfig {
     pub checkpoint_distance: Option<u64>,
     pub checkpoint_timeout: Option<String>,
@@ -280,7 +290,7 @@ pub struct TenantConfig {
 /// A flattened analog of a `pagesever::tenant::LocationMode`, which
 /// lists out all possible states (and the virtual "Detached" state)
 /// in a flat form rather than using rust-style enums.
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, PartialEq, Eq, Clone)]
 pub enum LocationConfigMode {
     AttachedSingle,
     AttachedMulti,
@@ -289,14 +299,14 @@ pub enum LocationConfigMode {
     Detached,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, PartialEq, Eq, Clone)]
 pub struct LocationConfigSecondary {
     pub warm: bool,
 }
 
 /// An alternative representation of `pageserver::tenant::LocationConf`,
 /// for use in external-facing APIs.
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, PartialEq, Eq, Clone)]
 pub struct LocationConfig {
     pub mode: LocationConfigMode,
     /// If attaching, in what generation?
@@ -331,7 +341,7 @@ pub struct StatusResponse {
 #[derive(Serialize, Deserialize, Debug)]
 #[serde(deny_unknown_fields)]
 pub struct TenantLocationConfigRequest {
-    pub tenant_id: TenantId,
+    pub tenant_shard_id: TenantShardId,
     #[serde(flatten)]
     pub config: LocationConfig, // as we have a flattened field, we should reject all unknown fields in it
 }
@@ -690,6 +700,22 @@ pub struct PagestreamErrorResponse {
 #[derive(Debug)]
 pub struct PagestreamDbSizeResponse {
     pub db_size: i64,
+}
+
+#[derive(Serialize, Deserialize, Debug)]
+pub struct TenantPhysicalSizeResponse {
+    pub size: u64,
+}
+
+// XXX hack: this is a cut-down version of TenantHistorySize from the pageserver crate, omitting fields
+// that require pageserver-internal types.  It is sufficient to get the total size.
+#[derive(Serialize, Deserialize, Debug)]
+pub struct TenantHistorySize {
+    pub id: TenantId,
+    /// Size is a mixture of WAL and logical size, so the unit is bytes.
+    ///
+    /// Will be none if `?inputs_only=true` was given.
+    pub size: Option<u64>,
 }
 
 impl PagestreamFeMessage {
