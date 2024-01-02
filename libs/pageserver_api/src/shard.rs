@@ -88,6 +88,16 @@ impl TenantShardId {
     pub fn is_unsharded(&self) -> bool {
         self.shard_number == ShardNumber(0) && self.shard_count == ShardCount(0)
     }
+
+    /// Convenience for dropping the tenant_id and just getting the ShardIndex: this
+    /// is useful when logging from code that is already in a span that includes tenant ID, to
+    /// keep messages reasonably terse.
+    pub fn to_index(&self) -> ShardIndex {
+        ShardIndex {
+            shard_number: self.shard_number,
+            shard_count: self.shard_count,
+        }
+    }
 }
 
 /// Formatting helper
@@ -336,7 +346,7 @@ const DEFAULT_STRIPE_SIZE: ShardStripeSize = ShardStripeSize(256 * 1024 / 8);
 pub struct ShardIdentity {
     pub number: ShardNumber,
     pub count: ShardCount,
-    stripe_size: ShardStripeSize,
+    pub stripe_size: ShardStripeSize,
     layout: ShardLayout,
 }
 
